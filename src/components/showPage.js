@@ -10,9 +10,11 @@ import React, {Component} from 'react';
 import {ScrollView ,Dimensions,Alert, AsyncStorage,View,Image, TextInput, TouchableOpacity, Platform, Animated, TouchableWithoutFeedback, StyleSheet} from 'react-native';
 import {Container, Icon, Text} from 'native-base';
 import ProgressBar from 'react-native-progress/Bar';
-
+import CustomHeader from './commonComponents/Header';
+import Modal from "react-native-modal";
 
 import Video from 'react-native-video';
+
 import getirAd from '../assets/getir.mp4';
 
 const THRESHOLD = 100;
@@ -46,11 +48,13 @@ export default class showPage extends Component {
             animated: new Animated.Value(0),
             progress: 0,
             duration: 0,
-            fullHeight: false,
+            fullscreen: false,
             periodData: '',
             visible: true,
             periods: [],
-            display: ''
+            display: '',
+            isModalVisible: true,
+            adWatched: false
         };
     };
 
@@ -100,7 +104,9 @@ export default class showPage extends Component {
 
     handleEnd = () => {
         this.setState({
-            paused: true
+            paused: true,
+            adWatched: true,
+            isModalVisible: true
         })
     }
 
@@ -169,14 +175,21 @@ export default class showPage extends Component {
     }
 
 
+    _toggleModal = () =>
+        this.setState({ isModalVisible: !this.state.isModalVisible });
+
+
+    replayVideo = () => {
+        this.player && this.player.seek(0);
+        this.setState({ paused: false, isModalVisible: false });
+    }
+
 
     render() {
 
         const styles = StyleSheet.create({
-            container: {
-                alignItems: 'center',
-                backgroundColor: '#F5FCFF',
-                justifyContent: 'center'
+            Container: {
+                alignItems: 'center'
             },
             welcome: {
                 fontSize: 20,
@@ -190,7 +203,7 @@ export default class showPage extends Component {
             },
             backgroundVideo: {
                 width: '100%',
-                height: height
+                height: '100%'
             },
             duration: {
               color: "#FFF",
@@ -215,8 +228,6 @@ export default class showPage extends Component {
                 width: width,
                 height: height,
                 backgroundColor: 'black',
-                marginLeft: 10,
-                marginRight: 10,
                 alignItems: 'center',
                 justifyContent: 'center',
                 overflow: "hidden"
@@ -226,7 +237,104 @@ export default class showPage extends Component {
                 backgroundColor: "#CCC",
                 paddingTop: 250,
                 alignItems: "center"
+            },
+            modalView: {
+                backgroundColor: "#6b3fef",
+                width: 300,
+                height: 420,
+                flexDirection: 'column',
+                alignItems: 'center',
+                borderRadius: 8,
+                justifyContent: 'space-evenly'
+            },
+            modalHeaderView: {
+                width: 260,
+                height: 40,
+                marginLeft: 20,
+                marginRight: 20,
+                backgroundColor: '#FED95F',
+                borderRadius: 6,
+                alignItems: 'center',
+                marginTop: 15,
+                justifyContent: 'center',
+                flexDirection: 'row'
+            },
+            modalViewTitle: {
+                fontSize: 25,
+                color: 'black'
+            },
+            modalViewText: {
+                fontSize: 15,
+                color: '#FED95F',
+                fontWeight: 'bold'
+            },
+            modalViewFooter: {
+                width: 300,
+                flexDirection: "row",
+                justifyContent: 'space-around',
+                height: 40
+            },
+            ModalMiddleView: {
+                alignItems: 'center',
+                flexDirection: 'row',
+                height: 30,
+                width: 200,
+                justifyContent: 'space-around',
+            },
+            modalButtonView: {
+                width: 50,
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: 34,
+                borderRadius: 6,
+                backgroundColor: '#FED95F'
+            },
+            question: {
+                color: 'white',
+                fontWeight: 'bold',
+                alignItems: 'center',
+                flexDirection: 'row',
+                margin: 5
+            },
+            choiceParentView: {
+                flexDirection: 'row',
+                width: 270,
+                height: 100,
+                flexWrap: 'wrap',
+                justifyContent: 'space-around'
+            },
+            choiceView: {
+                width: 110,
+                height: 50,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: '#FED95F',
+                margin: 10,
+                borderRadius: 8
+            },
+            answerText: {
+                fontSize: 15,
+                fontWeight: 'bold'
+            },
+            replayView: {
+                width: 150,
+                height: 40,
+                flexDirection: 'row',
+                backgroundColor: '#FED95F',
+                justifyContent: 'center',
+                alignItems: 'center',
+                borderRadius: 8
+            },
+            replayText: {
+                fontWeight: 'bold',
+                fontSize: 18
+            },
+            replayIcon: {
+                fontSize: 25,
+                fontWeight: 'bold',
+                marginLeft: 10
             }
+
         });
 
 
@@ -264,15 +372,16 @@ export default class showPage extends Component {
 
 
 
-        return (
-           <Container style={styles.container}>
+        return(
+           <Container style={styles.Container}>
+            <CustomHeader hamburger={true}/>
                 <View disabled style={styles.videoParentView}>
                     <TouchableWithoutFeedback  onPress={this.handleVideoPress}>
                     <Video source={getirAd}   // Can be a URL or a local file.
                            ref={(ref) => {
                                this.player = ref
                            }}                                      // Store reference
-                           paused={this.state.paused}
+                           paused={this.state.isModalVisible===true?true:this.state.paused}
                            onLoadStart={this.handleLoadStart}
                            onLoad={this.handleLoad}
                            onProgress={this.handleProgress}
@@ -280,7 +389,7 @@ export default class showPage extends Component {
                            onEnd={this.handleEnd}                      // Callback when playback finishes
                            onError={()=>this.handleError}              // Callback when video cannot be loaded
                            style={styles.backgroundVideo}
-                           resizeMode="contain"
+                           resizeMode="none"
                                                      />
                     </TouchableWithoutFeedback>
                     <Animated.View style={[styles.controls, controlHideStyle]}>
@@ -301,11 +410,77 @@ export default class showPage extends Component {
                         <Text style={styles.duration}>
                             {secondsToTime(Math.floor(this.state.progress * this.state.duration))}
                         </Text>
+                        <TouchableWithoutFeedback onPress={()=>this.setState({fullscreen: !this.state.fullscreen})}>
+                            <Icon name="expand"/>
+                        </TouchableWithoutFeedback>
                     </Animated.View>
                 </View>
+               <Modal style={{height: 250}}
+                   //   onBackdropPress={() => this.setState({ isModalVisible: false })}  when active, modal disappear when there is press outside Modal
+                      isVisible={this.state.isModalVisible}>
+                   {!this.state.adWatched?
+                       <View style={styles.modalView}>
+                           <View style={styles.modalHeaderView}>
+                               <Text style={styles.modalViewTitle}>Upcoming Ad</Text>
+                           </View>
+                           <View style={styles.ModalMiddleView}>
+                               <Text style={styles.modalViewText}>Type: </Text>
+                               <Text>Video</Text>
+                           </View>
+                           <View style={styles.ModalMiddleView}>
+                               <Text style={styles.modalViewText}>Length:   </Text>
+                               <Text>00:16</Text>
+                           </View>
+                           <View style={styles.ModalMiddleView}>
+                               <Text style={styles.modalViewText}>Prize:  </Text>
+                               <Text>2 Cent</Text>
+                           </View>
+                           <View style={styles.modalViewFooter}>
+                               <TouchableOpacity style={styles.modalButtonView}>
+                                   <Text onPress={()=>this._toggleModal()} style={{ color: 'black'}}>Watch</Text>
+                               </TouchableOpacity>
+                               <TouchableOpacity style={styles.modalButtonView}>
+                                   <Text style={{color: 'black'}}>Skip</Text>
+                               </TouchableOpacity>
+                           </View>
+                        </View>
+                       :
+                       <View style={styles.modalView}>
+                               <View style={styles.modalHeaderView}>
+                                   <Text style={styles.modalViewTitle}>Question</Text>
+                               </View>
+                               <TouchableOpacity onPress={()=>this.replayVideo()} style={styles.replayView}>
+                                   <Text style={styles.replayText}>Replay Ad</Text>
+                                   <Icon style={styles.replayIcon} name="refresh"/>
+                               </TouchableOpacity>
+
+                           <Text style={styles.question}>What sort of service is provided by the product shown?</Text>
+                           <TouchableOpacity disabled style={styles.choiceParentView}>
+                                   <TouchableOpacity style={styles.choiceView}>
+                                        <Text style={styles.answerText}>Accomodation</Text>
+                                   </TouchableOpacity>
+
+                                   <TouchableOpacity style={styles.choiceView}>
+                                       <Text style={styles.answerText}>Shipping Products</Text>
+                                   </TouchableOpacity>
+
+                                   <TouchableOpacity style={styles.choiceView}>
+                                       <Text style={styles.answerText}>Consulting</Text>
+                                   </TouchableOpacity>
+
+                                   <TouchableOpacity style={styles.choiceView}>
+                                       <Text style={styles.answerText}>Health</Text>
+                                   </TouchableOpacity>
+                           </TouchableOpacity>
+                       </View>
+
+                   }
+
+               </Modal>
             </Container>
         );
     }
+
 }
 
 
